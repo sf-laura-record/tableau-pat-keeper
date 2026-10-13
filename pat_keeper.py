@@ -253,7 +253,7 @@ def cmd_gui():
 
     # Header
     tk.Label(root, text="Tableau PAT Keeper", font=("Helvetica", 15, "bold")).grid(row=0, column=0, columnspan=4, pady=(14, 4))
-    tk.Label(root, text="PATs are stored in macOS Keychain. Refresh signs in/out to reset the 15-day timer.", fg="gray").grid(row=1, column=0, columnspan=4)
+    tk.Label(root, text="PATs are stored in macOS Keychain / Windows Credential Manager. Refresh signs in/out to reset the 15-day timer.", fg="gray").grid(row=1, column=0, columnspan=4)
 
     # Entry list
     frame = tk.Frame(root)
@@ -288,8 +288,8 @@ def cmd_gui():
         ("Label (optional)",  "e.g. The Outpost"),
         ("Server URL",        "e.g. https://prod-useast-a.online.tableau.com"),
         ("Site URI",          "e.g. DataArcade  (from the URL after /site/)"),
-        ("PAT Name",          "e.g. my-pat"),
-        ("PAT Secret",        ""),
+        ("PAT Name",          "e.g. claude-code"),
+        ("PAT Secret",        "paste secret here"),
     ]
     entries_vars: list[tk.StringVar] = []
     entry_widgets: list[tk.Entry] = []
@@ -626,7 +626,23 @@ Examples:
     elif args.cmd == "remove":
         cmd_remove(args.site, args.pat_name)
     elif args.cmd == "refresh":
-        cmd_refresh(dry_run=args.dry_run)
+        results = cmd_refresh(dry_run=args.dry_run)
+        if results:
+            ok_count = sum(1 for r in results if r["ok"])
+            fail_count = len(results) - ok_count
+            if fail_count:
+                title = f"PAT Keeper: {fail_count} refresh(es) failed"
+                body = "; ".join(r["label"] for r in results if not r["ok"])
+            else:
+                title = f"PAT Keeper: {ok_count} PAT(s) refreshed"
+                body = "; ".join(r["label"] for r in results)
+            import subprocess as _sp
+            _sp.run(
+                ["/opt/homebrew/bin/terminal-notifier",
+                 "-title", title,
+                 "-message", body],
+                check=False,
+            )
     elif args.cmd == "gui":
         cmd_gui()
     elif args.cmd == "install-cron":
